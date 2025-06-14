@@ -15,7 +15,7 @@ import java.util.Map;
 public class RoomState {
     String roomName;
     // Температура воздуха в комнате (в °C)
-    private double airTemperature = 0;
+    private double airTemperature = 20;
     // Подаваемая мощность нагрева (в Вт)
     private double heaterPower = 0;
     // Карта: имя поверхности → её температура

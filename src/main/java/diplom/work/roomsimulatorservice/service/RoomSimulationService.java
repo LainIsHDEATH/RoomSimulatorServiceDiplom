@@ -7,6 +7,7 @@ import diplom.work.roomsimulatorservice.dto.storage.storage_sensor_client.Sensor
 import diplom.work.roomsimulatorservice.dto.storage.storage_simulation_client.SimulationDTO;
 import diplom.work.roomsimulatorservice.feign.LSTMClient;
 import diplom.work.roomsimulatorservice.feign.PIDClient;
+import diplom.work.roomsimulatorservice.feign.storage.StoragePidConfigClient;
 import diplom.work.roomsimulatorservice.feign.storage.StorageRoomClient;
 import diplom.work.roomsimulatorservice.feign.storage.StorageSensorDataClient;
 import diplom.work.roomsimulatorservice.feign.storage.StorageSimulationClient;
@@ -15,15 +16,17 @@ import diplom.work.roomsimulatorservice.model.room.RoomParams;
 import diplom.work.roomsimulatorservice.model.room.RoomState;
 import diplom.work.roomsimulatorservice.model.surface.SurfaceParams;
 import diplom.work.roomsimulatorservice.util.RoomMapper;
+import diplom.work.roomsimulatorservice.util.TemperatureLoader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Random;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,24 +36,27 @@ public class RoomSimulationService {
     private final LSTMClient lstmClient;
     private final StorageRoomClient storageRoomClient;
     private final StorageSimulationClient storageSimulationClient;
-    private final StorageSensorDataClient storageSensorDataClient;
+    private final StoragePidConfigClient storagePidConfigClient;
     private final RoomMapper roomMapper;
     private final KafkaSensorProducer kafkaSensorProducer;
     private final Random random = new Random();
     private final RoomRegistryService roomRegistryService;
 
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+
     /**
      * Старт симуляции в отдельном потоке. Возвращает её Id.
      */
-    public Long startSimulation(Long roomId, String roomName, Double initialAirTemp, String controllerType, Long iterations, Double timestep) {
+    public Long startSimulation(Long roomId, Double initialAirTemp, String controllerType, Long pidConfigId, Long modelId, Long iterations, Long timestep) {
+        String roomName = Objects.requireNonNull(storageRoomClient.getRoomById(roomId).getBody()).name();
         if (!roomRegistryService.exists(roomName)) {
             registerRoom(roomId, roomName);
         }
 
-        Long simulationId = getSimulationId(roomId, controllerType);
+        Long simulationId = getSimulationId(roomId, controllerType, iterations, timestep);
 
         // Запускаем асинхронно, чтобы вернуть управление HTTP-потоку
-        runSimulationAsync(simulationId, roomName, controllerType, iterations, timestep);
+        executorService.submit(() -> runSimulationAsync(simulationId, roomName, controllerType, pidConfigId, modelId, iterations, timestep));
 
         return simulationId;
     }
@@ -62,25 +68,26 @@ public class RoomSimulationService {
         roomRegistryService.register(room.getId(), roomName, roomParams, new RoomState());
     }
 
-    private Long getSimulationId(Long roomId, String controllerType) {
-        SimulationDTO simulationDTO = new SimulationDTO(null, controllerType, "CREATED");
+    private Long getSimulationId(Long roomId, String controllerType, Long iterations, Long timestep) {
+        SimulationDTO simulationDTO = new SimulationDTO(null, controllerType, "CREATED", iterations, timestep);
         return Objects.requireNonNull(storageSimulationClient.saveSimulation(roomId, simulationDTO).getBody()).id();
     }
 
     @Async
-    void runSimulationAsync(Long simulationId, String roomName, String controllerType, Long iterations, Double timestep) {
+    protected void runSimulationAsync(Long simulationId, String roomName, String controllerType, Long pidConfigId, Long modelId, Long iterations, Long timestep) {
         LocalDateTime timestamp = LocalDateTime.of(2025, 1, 1, 0, 0, 0);
+        System.out.println(timestamp);
+        Queue<Double> tempOutQueue = computeOutsideTemperature();
         //double setpoint = getTargetTemperature(timestamp);   // например, постоянная цель
-        double tempOut = computeOutsideTemperature(timestamp);
-        double dt = timestep;          // шаг времени, сек
         Room room = roomRegistryService.getByName(roomName).get();
         RoomParams roomParams = room.getRoomParams();
         RoomState roomState = room.getRoomState();
 
         for (int step = 0; step < iterations; step++) {
-            simulateStep(timestamp, dt, roomParams, roomState);
+            double tempOut = tempOutQueue.poll();
+            simulateStep(timestamp, timestep, controllerType, pidConfigId, modelId, roomParams, roomState, tempOut);
             sendDataToStorage(simulationId, roomState, tempOut, timestamp);
-            timestamp = timestamp.plusSeconds((long) dt);
+            timestamp = timestamp.plusSeconds((long) timestep);
 
 //            // 2) при PID+LSTM: предскажем temp через N минут
 //            Double predicted = null;
@@ -113,18 +120,25 @@ public class RoomSimulationService {
     }
 
 
-    public void simulateStep(LocalDateTime timestamp, double dt, RoomParams roomParams, RoomState roomState/*, boolean lstm*/) {
-        double tempOut = computeOutsideTemperature(timestamp);
-
+    public void simulateStep(LocalDateTime timestamp, double dt, String controllerType, Long pidConfigId, Long modelId, RoomParams roomParams, RoomState roomState, double tempOut/*, boolean lstm*/) {
         // Влияние людей (добавим 100 Вт, если есть)
         double peopleHeat = computePeopleHeat(roomState);
+
 
         Map<String, Double> newSurfaceTemps = computeNewSurfacesTemps(roomParams, roomState, tempOut, dt);
         double totalHeatFlow = computeSurfaceHeatFlow(roomParams, roomState, tempOut, dt);
 
         // Влияние нагревателя (Вт)
+        double heaterPowerWatts = 0;
         boolean lstm = false;
-        double heaterPowerWatts = computeHeaterHeat(roomState, lstm, tempOut, dt, timestamp);
+        if (Objects.equals(controllerType, "PID")){
+            System.out.println(timestamp);
+            heaterPowerWatts = computeHeaterHeatPID(pidConfigId, roomState, tempOut, dt, timestamp);
+        }
+        if (Objects.equals(controllerType, "PID+LSTM")){
+            lstm = true;
+        }
+//        double heaterPowerWatts = computeHeaterHeat(roomState, lstm, tempOut, dt, timestamp);
 
         // Общий поток
         double totalQ = totalHeatFlow + heaterPowerWatts + peopleHeat;
@@ -216,13 +230,21 @@ public class RoomSimulationService {
         return (q_in - q_out) / surface.getHeatCapacity(); // °C/сек
     }
 
-    private double computeOutsideTemperature(LocalDateTime timestamp) {
-        // Получаем угол для синусоиды: полный цикл за 24 часа
-        int secondsInDay = timestamp.toLocalTime().toSecondOfDay();
-        double angle = 2 * Math.PI * secondsInDay / (24 * 60 * 60);
+    private Queue<Double> computeOutsideTemperature() {
+//        Path path1 = Path.of("src", "main", "resources", "response.csv");
+//        Path path2 = Path.of("src", "main", "resources", "response2.csv");
+        Path path3 = Path.of("src", "main", "resources", "response3.csv");
 
-        // Среднее 10°C, амплитуда 5°C → диапазон [5, 15]
-        return 10.0 + 5.0 * Math.sin(angle);
+        List<Double> allTemps = new ArrayList<>();
+        try {
+//            allTemps.addAll(TemperatureLoader.readTempsFromCsv(path1));
+//            allTemps.addAll(TemperatureLoader.readTempsFromCsv(path2));
+            allTemps.addAll(TemperatureLoader.readTempsFromCsv(path3));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        return TemperatureLoader.upsampleToOneMinute(allTemps);
     }
 
     private double getTargetTemperature(LocalDateTime timestamp) {
@@ -244,6 +266,29 @@ public class RoomSimulationService {
     private double i = 0;
     private double predictedTemperature = -1;
     private double targetTemperatureDesiredCorrected = 0; // Бажана користувачем уставка
+
+    private double computeHeaterHeatPID(Long pidConfigId, RoomState roomState, Double tempOut, double dt, LocalDateTime timestamp) {
+        if (pidConfigId == null || pidConfigId == 0) {
+            // попробуем взять активную конфигурацию комнаты
+            pidConfigId = storagePidConfigClient
+                    .getActive(1L)   // сделайте такой метод
+                    .getBody()
+                    .id();
+        }
+        double pidSetpoint = getTargetTemperature(timestamp); // Уставка, яка буде подана в PID
+
+        // Запит до PID-контролера
+        PIDRequest pidRequest = new PIDRequest(
+                pidConfigId,
+                pidSetpoint,
+                roomState.getAirTemperature(),
+                dt,
+                timestamp
+        );
+
+        PIDResponse pidResponse = pidClient.compute(pidRequest);
+        return pidResponse.outputPower(); // PID видає потрібну потужність
+    }
 
     private double computeHeaterHeat(RoomState roomState, boolean lstm, double outsideTemperature, double dt, LocalDateTime timestamp) {
 
@@ -278,10 +323,11 @@ public class RoomSimulationService {
 
         // Запит до PID-контролера
         PIDRequest pidRequest = new PIDRequest(
-                roomState.getRoomName(),
+                1L,
                 pidSetpoint, // !!! СКОРИГОВАНА АБО БАЖАНА УСТАВКА подається в PID як ЦІЛЬ
                 roomState.getAirTemperature(), // !!! ПОТОЧНА ВИМІРЯНА ТЕМПЕРАТУРА подається в PID як ВИМІРЯНЕ ЗНАЧЕННЯ
-                dt
+                dt,
+                timestamp
         );
 
         PIDResponse pidResponse = pidClient.compute(pidRequest);
@@ -310,7 +356,6 @@ public class RoomSimulationService {
                 roomState.isDoorOpen(),
                 roomState.getPeopleCount()
         );
-//        storageClient.addStep(simulationId, sensorDataDTO);
         kafkaSensorProducer.sendSensorData(sensorDataDTO);
     }
 

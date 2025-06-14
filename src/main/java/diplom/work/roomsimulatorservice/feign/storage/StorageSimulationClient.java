@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient(name = "storage-service", url = "${feign.client.config.storage-service.url}")
+@FeignClient(name = "storage-simulation-service", url = "${feign.client.config.storage-service.url}")
 public interface StorageSimulationClient {
 
     @PostMapping("/api/simulations/{roomId}")

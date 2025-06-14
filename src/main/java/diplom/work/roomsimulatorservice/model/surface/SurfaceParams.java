@@ -1,5 +1,8 @@
 package diplom.work.roomsimulatorservice.model.surface;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;
@@ -14,7 +17,10 @@ public class SurfaceParams implements Serializable {
     private final double area;          // A
     private final double thickness; // d
     private final double density; // p = m/V
+
+    @JsonProperty("uInternal")
     private final double uInternal;     // U внутренняя сторона
+    @JsonProperty("uExternal")
     private final double uExternal;     // U внешняя сторона
     private final double thermalConductivity; // k_lambda // λ
     private final double specificHeat; // c
@@ -24,21 +30,23 @@ public class SurfaceParams implements Serializable {
 
     private final String adjacentRoomName; // null или имя другой комнаты (если это внутренняя поверхность)
 
-    public String adjacentRoomName() {
-        return adjacentRoomName;
-    }
+    @JsonProperty("uInternal")
+    public double getUInternal() { return uInternal; }
 
+    @JsonProperty("uExternal")
+    public double getUExternal() { return uExternal; }
+
+    @JsonCreator
     @Builder
-    public SurfaceParams(String name,
-                         double area,
-                         double thickness,
-                         double density,
-                         double uInternal,
-                         double uExternal,
-                         double thermalConductivity,
-                         double specificHeat,
-                         String adjacentRoomName) {
-
+    public SurfaceParams(@JsonProperty("name") String name,
+                         @JsonProperty("area") double area,
+                         @JsonProperty("thickness") double thickness,
+                         @JsonProperty("density") double density,
+                         @JsonProperty("uInternal") @JsonAlias("uinternal") double uInternal,
+                         @JsonProperty("uExternal") @JsonAlias("uexternal") double uExternal,
+                         @JsonProperty("thermalConductivity") double thermalConductivity,
+                         @JsonProperty("specificHeat") double specificHeat,
+                         @JsonProperty("adjacentRoomName") String adjacentRoomName) {
         this.name = name;
         this.area = area;
         this.thickness = thickness;

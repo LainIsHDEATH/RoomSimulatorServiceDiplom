@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 
-@FeignClient(name = "storage-service", url = "${feign.client.config.storage-service.url}")
+@FeignClient(name = "storage-sensor-data-service", url = "${feign.client.config.storage-service.url}")
 public interface StorageSensorDataClient {
 
     @PostMapping("/api/sensor-data/simulation-data/{simulationId}/step")

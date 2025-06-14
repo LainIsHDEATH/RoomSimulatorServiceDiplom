@@ -1,8 +1,11 @@
 package diplom.work.roomsimulatorservice.dto.PidDTO;
 
+import java.time.LocalDateTime;
+
 public record PIDRequest(
-        String roomName,
+        Long pidConfigId,
         double targetTemperature,
         double currentTemperature,
-        double deltaTime
+        double deltaTime,
+        LocalDateTime timestamp
 ) {}
