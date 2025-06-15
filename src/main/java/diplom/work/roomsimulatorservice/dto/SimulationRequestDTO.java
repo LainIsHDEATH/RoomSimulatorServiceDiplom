@@ -1,11 +1,14 @@
 package diplom.work.roomsimulatorservice.dto;
 
+import diplom.work.roomsimulatorservice.util.ControllerType;
+
 public record SimulationRequestDTO(
-        Long roomId,
-        String controllerType,  // e.g. "PID", "PID+LSTM", "RL"
-        Long pidConfigId,     // конфигурация PID
-        Long modelId,         // может быть null для PID
-        Long iterations,
-        Long timestepSeconds
+    long roomId,
+    ControllerType controllerType,
+    Integer pidConfigId,
+    Integer modelId,
+    Long iterations,
+    Integer timestepSeconds
+//    List<SchedulePoint> schedule;
 ) {
 }

@@ -1,10 +1,12 @@
-package diplom.work.roomsimulatorservice.model.room;
+package diplom.work.roomsimulatorservice.domain.room;
 
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import diplom.work.roomsimulatorservice.model.surface.SurfaceParams;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.Serializable;
 import java.util.List;

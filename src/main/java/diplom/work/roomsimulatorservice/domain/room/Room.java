@@ -1,4 +1,4 @@
-package diplom.work.roomsimulatorservice.model.room;
+package diplom.work.roomsimulatorservice.domain.room;
 
 
 import lombok.AllArgsConstructor;

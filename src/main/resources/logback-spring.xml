@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Переменная, чтобы не дублировать путь -->
+    <property name="LOG_FILE" value="logs/room-simulator.log"/>
+
+    <!-- Оставляем вывод в консоль, если нужен -->
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <!-- Один файл, без ротации -->
+    <appender name="SINGLE_FILE" class="ch.qos.logback.core.FileAppender">
+        <file>${LOG_FILE}</file>
+        <append>true</append>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Если нужна ротация по дням (оставлять, скажем, месяц) —
+         замените FileAppender на RollingFileAppender -->
+    <!--
+    <appender name="ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/room-simulator.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    -->
+
+    <!-- Корневой логгер: всё уходит в файл (и, при желании, в консоль) -->
+    <root level="INFO">
+        <appender-ref ref="SINGLE_FILE"/>
+        <!-- <appender-ref ref="ROLLING_FILE"/> -->
+        <!-- <appender-ref ref="CONSOLE"/> -->
+    </root>
+
+    <!-- Ваш пакет можно опустить до DEBUG -->
+    <logger name="diplom.work" level="DEBUG"/>
+</configuration>

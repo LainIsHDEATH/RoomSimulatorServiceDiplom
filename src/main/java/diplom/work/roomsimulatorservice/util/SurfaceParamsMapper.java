@@ -1,7 +1,7 @@
 package diplom.work.roomsimulatorservice.util;
 
+import diplom.work.roomsimulatorservice.domain.room.SurfaceParams;
 import diplom.work.roomsimulatorservice.dto.SurfaceParamsDTO;
-import diplom.work.roomsimulatorservice.model.surface.SurfaceParams;
 import org.mapstruct.Mapper;
 import org.mapstruct.ReportingPolicy;
 

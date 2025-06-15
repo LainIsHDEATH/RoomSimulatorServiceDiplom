@@ -10,5 +10,5 @@ import org.springframework.web.bind.annotation.PathVariable;
 public interface StorageAiModelClient {
 
     @GetMapping("/{modelId}")
-    ResponseEntity<AiModelDTO> getAiModelById(@PathVariable Long modelId);
+    ResponseEntity<AiModelDTO> getAiModelById(@PathVariable Integer modelId);
 }

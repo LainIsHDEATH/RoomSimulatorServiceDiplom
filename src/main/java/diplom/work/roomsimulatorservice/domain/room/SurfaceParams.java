@@ -1,4 +1,4 @@
-package diplom.work.roomsimulatorservice.model.surface;
+package diplom.work.roomsimulatorservice.domain.room;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -19,16 +19,16 @@ public class SurfaceParams implements Serializable {
     private final double density; // p = m/V
 
     @JsonProperty("uInternal")
-    private final double uInternal;     // U внутренняя сторона
+    private final double uInternal;     // U внутрішня
     @JsonProperty("uExternal")
-    private final double uExternal;     // U внешняя сторона
+    private final double uExternal;     // U зовнішня
     private final double thermalConductivity; // k_lambda // λ
     private final double specificHeat; // c
     private final double mass; // m = ρ · A · d
     private final double heatCapacity;  // C = c * m
-    private final double totalU; // U // U = 1 / (1/Uвнутр + d/λ + 1/Uвнеш)
+    private final double totalU; // U // U = 1 / (1/Uвнутр + d/λ + 1/Uзовн)
 
-    private final String adjacentRoomName; // null или имя другой комнаты (если это внутренняя поверхность)
+    private final String adjacentRoomName;
 
     @JsonProperty("uInternal")
     public double getUInternal() { return uInternal; }

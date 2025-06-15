@@ -1,11 +1,10 @@
-package diplom.work.roomsimulatorservice.dto.storage.storage_simulation_client;
+package diplom.work.roomsimulatorservice.dto.RlTrainDTO;
 
 import diplom.work.roomsimulatorservice.util.ControllerType;
 
-public record SimulationDTO(
-        Long id,
+public record RlTrainSimulationDtoRequest(
+        long roomId,
         ControllerType controllerType,
-        String status,
         Long iterations,
         Integer timestepSeconds
 ) {

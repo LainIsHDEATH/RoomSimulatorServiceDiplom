@@ -1,11 +1,10 @@
-package diplom.work.roomsimulatorservice.dto.storage.storage_simulation_client;
+package diplom.work.roomsimulatorservice.dto.autotunePidDTO;
 
 import diplom.work.roomsimulatorservice.util.ControllerType;
 
-public record SimulationDTO(
-        Long id,
+public record AutotunePidSimulationDtoRequest(
+        long roomId,
         ControllerType controllerType,
-        String status,
         Long iterations,
         Integer timestepSeconds
 ) {

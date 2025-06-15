@@ -1,4 +1,4 @@
-package diplom.work.roomsimulatorservice.model.temperature;
+package diplom.work.roomsimulatorservice.util.temperaturePlan;
 
 import java.time.LocalTime;
 

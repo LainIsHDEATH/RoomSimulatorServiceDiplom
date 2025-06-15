@@ -15,6 +15,6 @@ public interface StoragePidConfigClient {
     public ResponseEntity<PidConfigDTO> create(@PathVariable Long roomId,
                                                @RequestBody PidConfigDTO pidConfigDTO);
 
-    @GetMapping("/api/pid-configs/room-configs/{roomId}/active")
-    ResponseEntity<PidConfigDTO> getActive(@PathVariable Long roomId);
+    @GetMapping("/api/pid-configs/{id}")
+    ResponseEntity<PidConfigDTO> getConfigById(@PathVariable Integer id);
 }

@@ -1,36 +1,40 @@
-package diplom.work.roomsimulatorservice.model.room;
+package diplom.work.roomsimulatorservice.domain.room;
 
-
-import diplom.work.roomsimulatorservice.model.surface.SurfaceParams;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Getter
+@Setter
 @NoArgsConstructor
 public class RoomState {
-    String roomName;
-    // Температура воздуха в комнате (в °C)
     private double airTemperature = 20;
-    // Подаваемая мощность нагрева (в Вт)
+    private double outsideTemperature;
+    private double setpointTemperature;
+    private double predictedTemperature;
+
     private double heaterPower = 0;
-    // Карта: имя поверхности → её температура
+
     private final Map<String, Double> surfaceTemperatures = new HashMap<>();
-    // Открытые поверхности
+
     private boolean windowOpen = false;
     private boolean doorOpen = false;
-    // Присутствие людей
+
     private int peopleCount = 0;
-    // Время последнего обновления
+
     private Instant lastUpdated = Instant.now();
 
-    public RoomState(String roomName, double initialAirTemp) {
-        this.roomName = roomName;
+    public RoomState(double initialAirTemp, List<SurfaceParams> surfaces) {
         this.airTemperature = initialAirTemp;
+
+        for (SurfaceParams s : surfaces) {
+            surfaceTemperatures.put(s.getName(), initialAirTemp-2);
+        }
     }
 
     public double getSurfaceTemperature(String key) {
@@ -38,19 +42,11 @@ public class RoomState {
     }
 
     /**
-     * Инициализировать поверхности один раз при старте
-     */
-    public void initSurfaces(RoomParams params) {
-        params.getSurfaces()
-                .forEach(s -> surfaceTemperatures
-                        .put(s.getName(), airTemperature - 2));
-    }
-
-    /**
      * Обновить состояние через один шаг симуляции
      */
     public void update(
             double newAirTemp,
+            double outsideTemperature,
             double newHeaterPower,
             Map<String, Double> newSurfaceTemps,
             boolean windowOpen,
@@ -58,6 +54,7 @@ public class RoomState {
             int peopleCount
     ) {
         this.airTemperature = newAirTemp;
+        this.outsideTemperature = outsideTemperature;
         this.heaterPower = newHeaterPower;
         this.windowOpen = windowOpen;
         this.doorOpen = doorOpen;
