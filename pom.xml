@@ -9,8 +9,8 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>diplom.work</groupId>
-    <artifactId>Room-SimulatorService</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <artifactId>RoomSimulatorService</artifactId>
+    <version>1.0.0</version>
     <name>RoomSimulatorService</name>
     <description>RoomSimulatorService</description>
     <url/>
