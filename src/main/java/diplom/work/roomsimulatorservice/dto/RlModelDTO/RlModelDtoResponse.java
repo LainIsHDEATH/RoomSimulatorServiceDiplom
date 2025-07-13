@@ -1,6 +1,6 @@
 package diplom.work.roomsimulatorservice.dto.RlModelDTO;
 
 public record RlModelDtoResponse (
-        double outputPower
+        double heaterPower
 ){
 }

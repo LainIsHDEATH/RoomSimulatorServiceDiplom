@@ -41,9 +41,6 @@ public class RoomState {
         return surfaceTemperatures.getOrDefault(key, 0.0);
     }
 
-    /**
-     * Обновить состояние через один шаг симуляции
-     */
     public void update(
             double newAirTemp,
             double outsideTemperature,

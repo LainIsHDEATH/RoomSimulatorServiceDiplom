@@ -9,7 +9,6 @@ import diplom.work.roomsimulatorservice.service.calculations.TargetTemperatureCa
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-// RlSimulationStrategy.java – реализация стратегии для управления RL-агентом
 @Component
 @RequiredArgsConstructor
 public class RlSimulationStrategy implements SimulationStrategy {
@@ -27,11 +26,12 @@ public class RlSimulationStrategy implements SimulationStrategy {
         ctx.getRoom().getRoomState().setSetpointTemperature(tempSetpoint);
 
         RlModelDtoRequest rlModelDtoRequest = new RlModelDtoRequest(
-                ctx.getModelId(), ctx.getRoom().getRoomState().getAirTemperature(), ctx.getRoom().getRoomState().getOutsideTemperature()
+                ctx.getModelId(),
+                ctx.getRoom().getRoomState().getAirTemperature(),
+                ctx.getRoom().getRoomState().getOutsideTemperature()
         );
 
-//        RlModelDtoResponse rlModelDtoResponse = aiModelsClient.computeHeatRL(rlModelDtoRequest);
-//        return rlModelDtoResponse.outputPower();
-        return 1;
+        RlModelDtoResponse rlModelDtoResponse = aiModelsClient.computeHeatRL(rlModelDtoRequest);
+        return rlModelDtoResponse.heaterPower();
     }
 }

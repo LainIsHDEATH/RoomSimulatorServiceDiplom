@@ -31,7 +31,8 @@ public class TrainRlSimulationStrategy implements SimulationStrategy {
         RlTrainDtoRequest rlModelDtoRequest = new RlTrainDtoRequest(
                 ctx.getSimulationId(),
                 ctx.getRoom().getRoomState().getAirTemperature(),
-                ctx.getRoom().getRoomState().getOutsideTemperature()
+                ctx.getRoom().getRoomState().getOutsideTemperature(),
+                ctx.getRoom().getRoomState().getSetpointTemperature()
         );
 
         RlTrainDtoResponse rlTrainDtoResponse = rlTrainClient.compute(rlModelDtoRequest);

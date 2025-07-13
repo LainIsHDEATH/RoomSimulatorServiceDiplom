@@ -15,6 +15,7 @@ import diplom.work.roomsimulatorservice.feign.storage.StorageRoomClient;
 import diplom.work.roomsimulatorservice.feign.storage.StorageSimulationClient;
 import diplom.work.roomsimulatorservice.model.SimpleThermalModel;
 import diplom.work.roomsimulatorservice.service.strategies.StrategyRegistry;
+import diplom.work.roomsimulatorservice.service.strategies.TrainRlSimulationStrategy;
 import diplom.work.roomsimulatorservice.util.ControllerType;
 import diplom.work.roomsimulatorservice.util.RoomMapper;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -43,62 +45,84 @@ public class SimulationRunnerService {
     private final RoomMapper roomMapper;
 
     public Long startSimulation(SimulationRequestDTO dto) {
-        Long roomId = dto.roomId();
-        // 1. загружаем доменные данные
-        RoomDTO roomDto = roomClient.getRoomById(roomId).getBody();
-        PidConfigDTO pidDto;
-        AiModelDTO aiDto;
-        if (dto.pidConfigId() != 0) {
-            pidDto = pidClient.getConfigById(dto.pidConfigId()).getBody();
-        }
-        if (dto.modelId() != 0) {
-            aiDto = aiModelClient.getAiModelById(dto.modelId()).getBody();
-        }
-//        AiModelDTO modelDTO = aiModelClient.getAiModelById(dto.modelId()).getBody();
-        Room room = roomMapper.toEntity(roomDto);
-        double INITIAL_AIR_TEMP = 20.0;
-        double MAX_HEATER_POWER = 2000.0;
-        LocalDateTime START_TIMESTAMP = LocalDateTime.of(2025, 1, 1, 0, 0, 0);
-        room.setRoomState(new RoomState(INITIAL_AIR_TEMP, room.getRoomParams().getSurfaces()));
 
-        // 2. строим clock (поддерживает виртуальное время симулятора)
-        SimulationClock clock = new SimulationClock(
-                START_TIMESTAMP,
-                dto.timestepSeconds() != null
-                        ? Duration.of(dto.timestepSeconds(), ChronoUnit.SECONDS)
-                        : Duration.of(60, ChronoUnit.SECONDS)
+        Long roomId = dto.roomId();
+        RoomDTO roomDto = roomClient.getRoomById(roomId).getBody();
+        if (roomDto == null)
+            throw new IllegalStateException("Room " + roomId + " not found");
+        Room room = roomMapper.toEntity(roomDto);
+
+        PidConfigDTO pidCfg = null;
+        AiModelDTO   aiCfg  = null;
+
+        ControllerType type = dto.controllerType();
+
+        switch (type) {
+            case PID -> {
+                Integer cfgId = Objects.requireNonNull(dto.pidConfigId(),
+                        "pidConfigId required for PID");
+                pidCfg = pidClient.getConfigById(cfgId).getBody();
+            }
+            case PID_LSTM -> {
+                Integer cfgId   = Objects.requireNonNull(dto.pidConfigId(),
+                        "pidConfigId required for PID_LSTM");
+                Integer modelId = Objects.requireNonNull(dto.modelId(),
+                        "modelId required for PID_LSTM");
+                pidCfg = pidClient.getConfigById(cfgId).getBody();
+                aiCfg  = aiModelClient.getAiModelById(modelId).getBody();
+            }
+            case RL -> {
+                Integer modelId = Objects.requireNonNull(dto.modelId(),
+                        "modelId required for RL controller");
+                aiCfg = aiModelClient.getAiModelById(modelId).getBody();
+            }
+            case TRAIN_RL -> 
+            {}
+            case AUTOTUNE_PID ->
+            {}
+            default -> throw new IllegalArgumentException("Unsupported controller: " + type);
+        }
+
+        double INITIAL_AIR_TEMP = 20.0;
+        double MAX_HEATER_POWER = 3000.0;
+        LocalDateTime START_TS  = LocalDateTime.of(2023, 9, 1, 0, 0);
+
+        room.setRoomState(new RoomState(
+                INITIAL_AIR_TEMP,
+                room.getRoomParams().getSurfaces())
         );
 
-        // 3. инициализируем simulation в БД и получаем id
-        SimulationDTO simulationDTO = new SimulationDTO(
+        SimulationClock clock = new SimulationClock(
+                START_TS,
+                Duration.of(dto.timestepSeconds() != null ? dto.timestepSeconds() : 60, ChronoUnit.SECONDS)
+        );
+
+        SimulationDTO simDto = new SimulationDTO(
                 roomId,
-                dto.controllerType(),
+                type,
                 "CREATED",
                 dto.iterations(),
                 dto.timestepSeconds()
         );
+        Long simId = simulationClient.saveSimulation(roomId, simDto).getBody().id();
 
-        Long simId = simulationClient.saveSimulation(
-                        roomId,
-                        simulationDTO)
-                .getBody().id();
-
-        // 3. собираем Context Builder-ом
         SimulationContext ctx = SimulationContext.builder()
                 .simulationId(simId)
-                .configId(dto.pidConfigId())
-                .modelId(dto.modelId())
+                .configId(pidCfg != null ? pidCfg.id() : 0)
+                .modelId(aiCfg  != null ? aiCfg.id()  : 0)
                 .room(room)
                 .thermalModel(simpleThermalModel)
-                .strategy(strategyRegistry.strategy(dto.controllerType()))
+                .strategy(strategyRegistry.strategy(type))
                 .clock(clock)
                 .iterations(dto.iterations())
                 .maxHeaterPower(MAX_HEATER_POWER)
                 .build();
         simulationRegistry.put(ctx);
 
-        log.info("SimulationId: {}, configId: {}, modelId: {}, thermalMModel: {}, strategy: {}", simId, ctx.getConfigId(), ctx.getModelId(), ctx.getThermalModel(), ctx.getStrategy());
-        // 4. передаём движку
+        log.info("Start sim {}, controller {}, pidCfg={}, model={}",
+                simId, type, pidCfg != null ? pidCfg.id() : "—",
+                aiCfg  != null ? aiCfg.id()  : "—");
+
         engine.run(ctx);
 
         return simId;

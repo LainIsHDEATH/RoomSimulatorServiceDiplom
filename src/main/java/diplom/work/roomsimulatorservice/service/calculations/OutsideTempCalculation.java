@@ -21,7 +21,9 @@ public class OutsideTempCalculation {
         try {
             if (year == 2023) {
                 path = Path.of("src", "main", "resources", "response3.csv");
+                path2 = Path.of("src", "main", "resources", "response5.csv");
                 allTemps.addAll(TemperatureLoader.readTempsFromCsv(path));
+                allTemps.addAll(TemperatureLoader.readTempsFromCsv(path2));
             } else {
                 path = Path.of("src", "main", "resources", "response.csv");
                 path2 = Path.of("src", "main", "resources", "response2.csv");

@@ -13,9 +13,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 @FeignClient(name = "AI-models", url = "${feign.client.config.AI-models.url}")
 public interface AiModelsClient {
 
-    @GetMapping("/api/predict")
+    @GetMapping("/lstm/predict")
     LstmModelDtoResponse predictTemperatureLSTM(@RequestBody LstmModelDtoRequest request);
 
-    @GetMapping("/api/compute")
+    @GetMapping("/rl/compute")
     RlModelDtoResponse computeHeatRL(@RequestBody RlModelDtoRequest request);
 }

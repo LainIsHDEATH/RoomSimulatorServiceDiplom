@@ -9,6 +9,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 @FeignClient(name = "storage-ai-service", url = "${feign.client.config.storage-service.url}")
 public interface StorageAiModelClient {
 
-    @GetMapping("/{modelId}")
+    @GetMapping("/api/models/{modelId}")
     ResponseEntity<AiModelDTO> getAiModelById(@PathVariable Integer modelId);
 }

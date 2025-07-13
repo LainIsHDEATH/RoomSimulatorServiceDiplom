@@ -28,8 +28,6 @@ public class PidLstmSimulationStrategy implements SimulationStrategy {
     private final TargetTemperatureCalculation targetTemperatureCalculation;
     private final StrategyProperties props;   // @ConfigurationProperties
 
-    /*───────────────────────────── ВНУТРЕННЕЕ СОСТОЯНИЕ ─────────────────────────────*/
-
     private record PidLstmState(
             double               lastCorrectedSetpoint,
             int                  stepsAfterPrediction,
@@ -60,7 +58,7 @@ public class PidLstmSimulationStrategy implements SimulationStrategy {
         return ControllerType.PID_LSTM;
     }
 
-    private double predictTemperature(Integer modelId, Deque<LstmSensorDTO> seq) {
+    private double predictTemperature(Long modelId, Deque<LstmSensorDTO> seq) {
         LstmModelDtoRequest req = new LstmModelDtoRequest(modelId, new ArrayList<>(seq));
         try {
             return aiModelsClient.predictTemperatureLSTM(req).predictedTemp();
@@ -98,7 +96,7 @@ public class PidLstmSimulationStrategy implements SimulationStrategy {
             room.setPredictedTemperature(tPred);
 
             double correction = (tPred - userSetpoint) * props.correctionGain();
-            pidSetpoint = userSetpoint + correction;
+            pidSetpoint = userSetpoint - correction;
 
             st = new PidLstmState(pidSetpoint, 0, st);
         } else {

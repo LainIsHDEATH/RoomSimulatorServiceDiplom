@@ -29,7 +29,7 @@ public class SimulationContext {
 
     private final long   simulationId;
     private final int    configId;
-    private final int    modelId;
+    private final Long    modelId;
 
     private final Room               room;
     private final ThermalModel       thermalModel;

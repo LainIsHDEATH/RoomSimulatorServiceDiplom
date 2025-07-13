@@ -15,23 +15,17 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class SimulationEngine {
 
-    private final KafkaSensorProducer producer;       // публикуем результаты
-    private final StorageSimulationClient storageSimulationClient;        // меняем статус SIMULATION → FINISHED
+    private final KafkaSensorProducer producer;
+    private final StorageSimulationClient storageSimulationClient;
 
-    /**
-     * Основной цикл. Вызов НЕ блокирует HTTP-поток: сервис-оркестратор
-     * отправляет его в @Async или в TaskExecutor.
-     */
     @Async
     public void run(SimulationContext ctx) {
         try {
             storageSimulationClient.markRunning(ctx.getSimulationId());
             for (long step = 0; step < ctx.getIterations(); step++) {
 
-                // 1) стратегия выдаёт мощность нагревателя
                 double heaterPower = ctx.getStrategy().compute(ctx);
                 log.info("Heater power: " + heaterPower);
-                // 2) тепловая модель считает ∆T помещения
                 ctx.getThermalModel().applyStep(ctx, heaterPower);
 
                 RoomState state = ctx.getRoom().getRoomState();
@@ -48,12 +42,10 @@ public class SimulationEngine {
                         state.getPeopleCount()
                 );
 
-                // 3) публикуем результаты в Kafka
                 producer.sendSensorData(
                         sensorDataDTO
                 );
 
-                // 4) тикаем симуляционные часы
                 ctx.getClock().tick();
             }
 

@@ -29,12 +29,12 @@ public class SimpleThermalModel implements ThermalModel {
         RoomState roomState = room.getRoomState();
 
         Queue<Double> extQueue = ctx.state("OUT_TEMP_QUEUE", () ->
-                outsideTempCalculation.computeOutsideTemperature(2024)
+                outsideTempCalculation.computeOutsideTemperature(2023)
         );
 
         Optional<Double> tOutOpt = Optional.ofNullable(extQueue.poll());
         if (!tOutOpt.isPresent()) {
-            ctx.putState("OUT_TEMP_QUEUE", outsideTempCalculation.computeOutsideTemperature(2024));
+            ctx.putState("OUT_TEMP_QUEUE", outsideTempCalculation.computeOutsideTemperature(2023));
             tOutOpt = Optional.ofNullable(((Queue<Double>) ctx.state("OUT_TEMP_QUEUE", () -> null)).poll());
         }
         double outsideTemp = tOutOpt.orElse(roomState.getOutsideTemperature());
@@ -45,11 +45,11 @@ public class SimpleThermalModel implements ThermalModel {
         log.info("Heater Power: " + heaterPowerWatts);
 
         double totalHeatFlow = physicsCalculation.computeSurfaceHeatFlow(roomParams, roomState);
+        log.info("Total Flow: " + totalHeatFlow);
 
-        // Общий поток
         double totalQ = totalHeatFlow + heaterPowerWatts;
+        log.info("Total Q: " + totalQ);
 
-        // Изменение температуры воздуха
         double dT_air = totalQ / roomParams.getAirHeatCapacity();
         double newAirTemp = roomState.getAirTemperature() +
                 dT_air * ctx.getClock().getStep().toSeconds();
