@@ -13,24 +13,15 @@ import java.util.Queue;
 public class OutsideTempCalculation {
 
     public Queue<Double> computeOutsideTemperature(Integer year) {
-        Path path;
-        Path path2;
-        Path path3;
-
         List<Double> allTemps = new ArrayList<>();
         try {
             if (year == 2023) {
-                path = Path.of("src", "main", "resources", "response3.csv");
-                path2 = Path.of("src", "main", "resources", "response5.csv");
-                allTemps.addAll(TemperatureLoader.readTempsFromCsv(path));
-                allTemps.addAll(TemperatureLoader.readTempsFromCsv(path2));
+                allTemps.addAll(TemperatureLoader.readTempsFromResource("response3.csv"));
+                allTemps.addAll(TemperatureLoader.readTempsFromResource("response5.csv"));
             } else {
-                path = Path.of("src", "main", "resources", "response.csv");
-                path2 = Path.of("src", "main", "resources", "response2.csv");
-                path3 = Path.of("src", "main", "resources", "response4.csv");
-                allTemps.addAll(TemperatureLoader.readTempsFromCsv(path));
-                allTemps.addAll(TemperatureLoader.readTempsFromCsv(path2));
-                allTemps.addAll(TemperatureLoader.readTempsFromCsv(path3));
+                allTemps.addAll(TemperatureLoader.readTempsFromResource("response.csv"));
+                allTemps.addAll(TemperatureLoader.readTempsFromResource("response2.csv"));
+                allTemps.addAll(TemperatureLoader.readTempsFromResource("response4.csv"));
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
