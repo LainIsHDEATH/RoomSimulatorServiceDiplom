@@ -1,8 +1,13 @@
 package diplom.work.roomsimulatorservice.util;
 
+import org.springframework.core.io.ClassPathResource;
+
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -12,17 +17,21 @@ import java.util.Queue;
 
 public class TemperatureLoader {
 
-    public static List<Double> readTempsFromCsv(Path csvPath) throws IOException {
-        List<String> lines = Files.readAllLines(csvPath);
+    public static List<Double> readTempsFromResource(String filename) throws IOException {
         List<Double> temps = new ArrayList<>();
-
-        for (int i = 1; i < lines.size(); i++) {
-            String[] parts = lines.get(i).split(",");
-            if (parts.length > 3) {
-                temps.add(Double.parseDouble(parts[3].trim()));
+        ClassPathResource resource = new ClassPathResource(filename);
+        try (BufferedReader br = new BufferedReader(
+                new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            boolean firstLine = true;
+            while ((line = br.readLine()) != null) {
+                if (firstLine) { firstLine = false; continue; }
+                String[] parts = line.split(",");
+                if (parts.length > 3) {
+                    temps.add(Double.parseDouble(parts[3].trim()));
+                }
             }
         }
-
         return temps;
     }
 
